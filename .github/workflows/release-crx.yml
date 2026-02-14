@@ -1,0 +1,84 @@
+name: Build and Upload CRX
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to upload asset to (example: v1.5.6)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-crx:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${{ inputs.tag }}"
+          fi
+          if [[ -z "$TAG" ]]; then
+            echo "Tag is empty" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Read version from manifest
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(jq -r '.version' src/manifest.json)
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+            echo "Could not read version from src/manifest.json" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Restore private key
+        shell: bash
+        env:
+          CWS_PRIVATE_KEY_B64: ${{ secrets.CWS_PRIVATE_KEY_B64 }}
+        run: |
+          if [[ -z "$CWS_PRIVATE_KEY_B64" ]]; then
+            echo "Missing secret CWS_PRIVATE_KEY_B64" >&2
+            exit 1
+          fi
+          echo "$CWS_PRIVATE_KEY_B64" | base64 --decode > release-key.pem
+
+      - name: Pack CRX
+        shell: bash
+        run: |
+          chrome --version
+          chrome --no-sandbox --pack-extension=src --pack-extension-key=release-key.pem
+          if [[ ! -f src.crx ]]; then
+            echo "Expected src.crx was not created" >&2
+            exit 1
+          fi
+          ASSET="chromium-web-store-v${{ steps.version.outputs.version }}.crx"
+          mv src.crx "$ASSET"
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+        id: pack
+
+      - name: Upload CRX to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: ${{ steps.pack.outputs.asset }}
+          fail_on_unmatched_files: true
