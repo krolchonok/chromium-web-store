@@ -55,8 +55,8 @@ jobs:
           jq --arg v "$NEXT" '.version = $v' src/manifest.json > src/manifest.json.tmp && mv src/manifest.json.tmp src/manifest.json
           jq --arg v "$NEXT" '.version = $v' en_nolocale/manifest.json > en_nolocale/manifest.json.tmp && mv en_nolocale/manifest.json.tmp en_nolocale/manifest.json
 
-          sed -E -i "s/version='[^']+'/version='$NEXT'/" updates.xml
-          sed -E -i "s/version='[^']+'/version='$NEXT'/" updates_en_nolocale.xml
+          sed -E -i "/<updatecheck / s/version='[^']+'/version='$NEXT'/" updates.xml
+          sed -E -i "/<updatecheck / s/version='[^']+'/version='$NEXT'/" updates_en_nolocale.xml
 
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
           echo "tag=v$NEXT" >> "$GITHUB_OUTPUT"
