@@ -180,6 +180,14 @@ function injectScript(file_path, tag) {
     node.appendChild(script);
 }
 
+function removeNcwsInstallChromePromos() {
+    document
+        .querySelectorAll(
+            'div[jscontroller="o2G9me"].gSrP5d, div[jscontroller="h4ilFc"][role="dialog"].F7ptP',
+        )
+        .forEach((node) => node.remove());
+}
+
 if (
     is_ows.test(window.location.href) &&
     document.body.querySelector("#feedback-container") //built-ins don't have a feedback section
@@ -213,6 +221,14 @@ window.onload = () => {
     });
 };
 if (is_ncws.test(window.location.href)) {
+    removeNcwsInstallChromePromos();
+    new MutationObserver(() => removeNcwsInstallChromePromos()).observe(
+        document.documentElement,
+        {
+            childList: true,
+            subtree: true,
+        },
+    );
     chrome.storage.sync.get(
         { webstore_integration: true },
         function (stored_values) {
