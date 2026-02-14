@@ -80,7 +80,7 @@ jobs:
             echo "Expected src.crx was not created" >&2
             exit 1
           fi
-          ASSET="chromium-web-store-v${{ steps.version.outputs.version }}.crx"
+          ASSET="Chromium.Web.Store.crx"
           mv src.crx "$ASSET"
           echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
         id: pack
