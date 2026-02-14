@@ -85,7 +85,8 @@ jobs:
           echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
         id: pack
 
-      - name: Upload CRX to release
+      - name: Create or update release notes and upload CRX
+        if: ${{ github.event_name != 'release' }}
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ steps.tag.outputs.tag }}
@@ -94,6 +95,15 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          files: ${{ steps.pack.outputs.asset }}
+          overwrite_files: true
+          fail_on_unmatched_files: true
+
+      - name: Upload CRX to existing published release
+        if: ${{ github.event_name == 'release' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
           files: ${{ steps.pack.outputs.asset }}
           overwrite_files: true
           fail_on_unmatched_files: true
