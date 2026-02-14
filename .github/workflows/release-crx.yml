@@ -11,7 +11,7 @@ on:
     inputs:
       tag:
         description: "Existing tag to upload asset to (example: v1.5.6)"
-        required: true
+        required: false
 
 permissions:
   contents: write
@@ -48,6 +48,9 @@ jobs:
             TAG="${{ github.event.release.tag_name }}"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             TAG="${{ inputs.tag }}"
+            if [[ -z "$TAG" ]]; then
+              TAG="v${{ steps.version.outputs.version }}"
+            fi
           else
             TAG="v${{ steps.version.outputs.version }}"
           fi
