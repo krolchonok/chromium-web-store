@@ -1,6 +1,10 @@
 name: Build and Upload CRX
 
 on:
+  push:
+    branches: [master]
+    paths:
+      - "src/manifest.json"
   release:
     types: [published]
   workflow_dispatch:
@@ -25,21 +29,6 @@ jobs:
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v1
 
-      - name: Resolve release tag
-        id: tag
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG="${{ inputs.tag }}"
-          fi
-          if [[ -z "$TAG" ]]; then
-            echo "Tag is empty" >&2
-            exit 1
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
       - name: Read version from manifest
         id: version
         shell: bash
@@ -50,6 +39,23 @@ jobs:
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="v${{ steps.version.outputs.version }}"
+          fi
+          if [[ -z "$TAG" ]]; then
+            echo "Tag is empty" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Restore private key
         shell: bash
@@ -79,6 +85,12 @@ jobs:
       - name: Upload CRX to release
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ steps.tag.outputs.tag }}
           tag_name: ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
           files: ${{ steps.pack.outputs.asset }}
+          overwrite_files: true
           fail_on_unmatched_files: true
